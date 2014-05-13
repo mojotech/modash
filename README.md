@@ -1,0 +1,4 @@
+modash
+======
+
+Useful lodash mixins
