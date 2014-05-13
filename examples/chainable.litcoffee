@@ -10,19 +10,22 @@ It takes an object containing methods and creates a new underscore instance with
 First lets setup some data for a first person shooter game:
 
     players = [
-       { firstName: 'Bobby', lastName: 'Bouche', kills: 125, deaths: 63, shots: 128  }
-       { firstName: 'Annie', lastName: 'Smalls', kills: 201, deaths: 14, shots: 2432 }
-       { firstName: 'Jacob', lastName: 'Jones',  kills: 101, deaths: 188, shots: 201 }
+       { firstName: 'Bobby', lastName: 'Bouche', sex: 'male', kills: 125, deaths: 63, shots: 128  }
+       { firstName: 'Annie', lastName: 'Smalls', sex: 'female', kills: 201, deaths: 14, shots: 2432 }
+       { firstName: 'Jacob', lastName: 'Jones',  sex: 'male', kills: 101, deaths: 188, shots: 201 }
      ]
 
 Here we create our transformer where we define the chainable method:
 
     transform = _.chainable
-       kdr: (p) ->
-         p.kills / p.deaths
-       accuracy: (p) ->
-         p.kills / p.shots
-       score: (p) -> @kdr(p) + @accuracy(p)
+      rank: (players) ->
+        _.random(1, players.length)
+      kdr: (p) ->
+        p.kills / p.deaths
+      accuracy: (p) ->
+        p.kills / p.shots
+      score: (p) ->
+        @kdr(p) + @accuracy(p)
 
 _.chainable adds two extra methods:
 
@@ -37,9 +40,9 @@ The object -- or each object in the array -- is then extended with the attribute
 
     # including on an array, with callback function
     console.log transform(players).including('fullName', (o) -> "#{o.firstName} #{o.lastName }").value()
-    # { firstName: 'Bobby', lastName: 'Bouche', fullName: "Bobby Bouche", kills: 125, deaths: 63, shots: 128  }
-    # { firstName: 'Annie', lastName: 'Smalls', fullName: "Annie Smalls", kills: 201, deaths: 14, shots: 2432 }
-    # { firstName: 'Jacob', lastName: 'Jones',  fullName: "Jacob Jones", kills: 101, deaths: 188, shots: 201 }
+    # { firstName: 'Bobby', lastName: 'Bouche', fullName: "Bobby Bouche", sex: 'male', kills: 125, deaths: 63, shots: 128  }
+    # { firstName: 'Annie', lastName: 'Smalls', fullName: "Annie Smalls", sex: 'female', kills: 201, deaths: 14, shots: 2432 }
+    # { firstName: 'Jacob', lastName: 'Jones',  fullName: "Jacob Jones", sex: 'male', kills: 101, deaths: 188, shots: 201 }
 
     # including on a single object (max returns the player with the max for a certain attribute, this is a standard underscore method)
     console.log transform(players).max('kills').including('fullName', (o) -> "#{o.firstName} #{o.lastName}").value()
@@ -48,12 +51,57 @@ The object -- or each object in the array -- is then extended with the attribute
 If no callback is provided, it assumes attributeName is also a function that was passed to _.chainable during construction.
 
     console.log transform(players).including('score').value()
-    # [ { firstName: 'Bobby', lastName: 'Bouche', kills: 125, deaths: 63, shots: 128, score: 2.960689484126984 },
-    #   { firstName: 'Annie', lastName: 'Smalls', kills: 201, deaths: 14, shots: 2432, score: 14.439790883458647 },
-    #   { firstName: 'Jacob', lastName: 'Jones', kills: 101, deaths: 188, shots: 201, score: 1.0397216047422462 } ]
+    # [ { firstName: 'Bobby', lastName: 'Bouche', sex: 'male', kills: 125, deaths: 63, shots: 128, score: 2.960689484126984 },
+    #   { firstName: 'Annie', lastName: 'Smalls', sex: 'female', kills: 201, deaths: 14, shots: 2432, score: 14.439790883458647 },
+    #   { firstName: 'Jacob', lastName: 'Jones', sex: 'male', kills: 101, deaths: 188, shots: 201, score: 1.0397216047422462 } ]
 
-## Why would I use chaining vs composition
+## Real world scenarios
 
+Your project manager wants to show women with their ranks.
 
+First we'll make a small render method, in the real world we would be appending something
+to the dom.
+
+    render = (klass) ->
+      (content) ->
+        console.log klass, content
+
+    transform(players)
+      .including('rank')
+      .where(sex: 'female')
+      .tap(render('.women'))
+
+What your project manager forgot to mention is that he doesn't want
+the ranking to take men into account. Chaining makes this easy to fix
+
+    transform(players)
+      .where(sex: 'female')
+      .including('rank')
+      .tap(render('.women'))
+
+Then the client sees this and loves it and they say, "oh haiii this is niiice, lets show everyone's ranking in one pane,
+only men rankings in another pane, then only women's rankings in the last pane"
+
+Again, super easy.
+
+"lets show everyon's ranking in one pane"
+
+    transform(players)
+      .including('rank')
+      .tap(render('.men-and-women'))
+
+"only the men's ranking in another pane"
+
+      .tap((rankedPlayers) ->
+        transform(rankedPlayers)
+          .where(sex: 'male')
+          .including('rank')
+          .tap(render('.men')))
+
+"and only women'sranking in the last"
+
+      .where(sex: 'female')
+      .including('rank')
+      .tap(render('.women'))
 
 If you’ve got questions, suggestions or want to grab the source check out this gist: https://gist.github.com/aesnyder/9923d5be47cfbc8a1e38
